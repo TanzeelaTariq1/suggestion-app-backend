@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const connectDB = require('./config/db.js');
 
 dotenv.config();
 
@@ -11,15 +10,23 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 9000;
 
-// Connect to MongoDB
-connectDB().then(() => {
-    console.log('✅ MongoDB connected');
-}).catch(err => {
-    console.error('❌ MongoDB connection failed:', err.message);
-});
-
 // Import routes
 const UserRoutes = require('./routes/UserRoutes.js');
+
+// Connect to MongoDB (if URI exists)
+if (process.env.MONGO_URI) {
+    const connectDB = require('./config/db.js');
+    connectDB().then(connection => {
+        if (connection) {
+            console.log('✅ MongoDB connected');
+        }
+    }).catch(err => {
+        console.error('❌ MongoDB connection error:', err.message);
+        // Continue without DB
+    });
+} else {
+    console.log('⚠️ Running without MongoDB connection');
+}
 
 // Routes
 app.get('/', (req, res) => {
@@ -37,7 +44,8 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
     res.json({ 
         status: 'ok',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        database: process.env.MONGO_URI ? 'configured' : 'not-configured'
     });
 });
 
